@@ -200,8 +200,7 @@
   <div class="tabs">
     <button class="tab active" onclick="go('lien')">Lien details</button>
     <button class="tab" onclick="go('analysis')">Lien analysis</button>
-    <button class="tab" onclick="go('tracker')">Offer tracker</button>
-    <button class="tab" onclick="go('negotiate')">Negotiate</button>
+        <button class="tab" onclick="go('negotiate')">Negotiate</button>
     <button class="tab" onclick="go('letter')">Draft letter</button>
   </div>
 
@@ -328,36 +327,6 @@
     </div>
   </div>
 
-  <!-- OFFER TRACKER -->
-  <div id="pane-tracker" class="pane">
-    <div id="tracker-empty" class="empty-msg">Run lien analysis to enable offer tracking.</div>
-    <div id="tracker-content" style="display:none;">
-      <p class="section-head">Negotiation timeline</p>
-      <div id="offer-list"></div>
-      <hr class="divider"/>
-      <p class="section-head">Log new position</p>
-      <div class="row3">
-        <div class="section">
-          <label>Party</label>
-          <select id="offer-party">
-            <option value="provider">Provider (us)</option>
-            <option value="plaintiff">Plaintiff counsel</option>
-            <option value="agreed">Agreed / settled</option>
-          </select>
-        </div>
-        <div class="section">
-          <label>Amount ($)</label>
-          <input type="number" id="offer-amt" placeholder="e.g. 45000"/>
-        </div>
-        <div class="section">
-          <label>Note</label>
-          <input type="text" id="offer-note" placeholder="e.g. Counteroffer #2"/>
-        </div>
-      </div>
-      <button class="btn btn-sm" onclick="logOffer()">Log position</button>
-    </div>
-  </div>
-
   <!-- NEGOTIATE -->
   <div id="pane-negotiate" class="pane">
     <div id="neg-empty" class="empty-msg">Run lien analysis to enable negotiation support.</div>
@@ -415,15 +384,13 @@
 
   function go(tab) {
     document.querySelectorAll('.tab').forEach((t, i) => {
-      t.classList.toggle('active', ['lien','analysis','tracker','negotiate','letter'][i] === tab);
+      t.classList.toggle('active', ['lien','analysis','negotiate','letter'][i] === tab);
     });
     document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
     document.getElementById('pane-' + tab).classList.add('active');
-    if ((tab === 'letter' || tab === 'tracker') && analysisRan) {
+    if (tab === 'letter' && analysisRan) {
       document.getElementById('letter-empty').style.display = 'none';
       document.getElementById('letter-content').style.display = 'block';
-      document.getElementById('tracker-empty').style.display = 'none';
-      document.getElementById('tracker-content').style.display = 'block';
     }
   }
 
@@ -465,6 +432,7 @@
     const prompt = `You are a medical lien negotiation analyst advising the PROVIDER (not the plaintiff). Analyze this lien position and provide:
 
 Line 1 only: METRICS:floor=$X|target=$Y|risk=low/medium/high|leverage=low/medium/high
+Note: floor should be ~30% of billed amount, target should be ~40-50% of billed amount.
 
 Then write 3-4 paragraphs of analysis covering:
 1. Lien strength and legal position (payor type, jurisdiction factors)
@@ -483,7 +451,7 @@ Case facts:
 - Jurisdiction: ${caseData.jurisdiction}
 - Notes: ${caseData.notes || 'none'}
 
-Be direct and practical. Focus on maximizing provider recovery while being realistic about what a court would award.`;
+This provider targets collecting 30-50% of the billed amount as their standard reduction range. The floor is 30% of billed (never accept below this). The target is 40-50% of billed. Flag any attorney offer below 30% of billed as unacceptable and requiring a counter. Frame all recommendations around this 30-50% collection window and justify reductions within that range based on case facts, liability, and jurisdiction.`;
 
     try {
       const res = await fetch(API_URL, {
@@ -524,50 +492,18 @@ Be direct and practical. Focus on maximizing provider recovery while being reali
       analysisRan = true;
       document.getElementById('neg-empty').style.display = 'none';
       document.getElementById('neg-content').style.display = 'block';
-      document.getElementById('tracker-empty').style.display = 'none';
-      document.getElementById('tracker-content').style.display = 'block';
+      
       chatHistory = [
         { role: 'user', content: `You are a medical provider lien negotiation advisor. The provider is your client.\n\nCase: ${JSON.stringify(caseData)}\n\nAnalysis:\n${analysisResult}` },
         { role: 'assistant', content: "I've reviewed the lien position and analysis. I'm ready to help strategize. What would you like to work through?" }
       ];
       renderChat();
-      if (offers.length === 0) renderOffers();
+      
     } catch (e) {
       document.getElementById('analysis-loading').style.display = 'none';
       document.getElementById('analysis-empty').style.display = 'block';
       document.getElementById('analysis-empty').textContent = 'Error: ' + e.message;
     }
-  }
-
-  function renderOffers() {
-    const el = document.getElementById('offer-list');
-    if (offers.length === 0) {
-      el.innerHTML = '<p style="font-size:13px;color:var(--text-tertiary);margin-bottom:8px;">No positions logged yet.</p>';
-      return;
-    }
-    el.innerHTML = offers.map(o => {
-      const cls = o.party === 'provider' ? 'dot-pr' : o.party === 'agreed' ? 'dot-agree' : 'dot-pl';
-      const label = o.party === 'provider' ? 'Provider' : o.party === 'agreed' ? 'Agreed' : 'Plaintiff counsel';
-      return `<div class="offer-row">
-        <div class="offer-dot ${cls}"></div>
-        <span style="font-size:12px;color:var(--text-secondary);min-width:110px">${label}</span>
-        <span style="font-size:14px;font-weight:500;min-width:90px">${fmt(o.amount)}</span>
-        <span style="font-size:12px;color:var(--text-secondary);flex:1">${o.note || ''}</span>
-        <span style="font-size:11px;color:var(--text-tertiary)">${o.time}</span>
-      </div>`;
-    }).join('');
-  }
-
-  function logOffer() {
-    const party = document.getElementById('offer-party').value;
-    const amt = +document.getElementById('offer-amt').value;
-    const note = document.getElementById('offer-note').value;
-    if (!amt) return;
-    const now = new Date();
-    offers.push({ party, amount: amt, note, time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
-    document.getElementById('offer-amt').value = '';
-    document.getElementById('offer-note').value = '';
-    renderOffers();
   }
 
   function renderChat() {
