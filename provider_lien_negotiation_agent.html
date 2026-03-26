@@ -597,7 +597,7 @@ Be direct and practical. Focus on maximizing provider recovery while being reali
         body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 700, messages: chatHistory })
       });
       const data = await res.json();
-      const reply = data.content.map(b => b.text || '').join('');
+      const reply = (data.content || []).map(b => b.text || '').join('');
       chatHistory.push({ role: 'assistant', content: reply });
       renderChat();
     } catch (e) {
