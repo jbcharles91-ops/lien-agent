@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Provider Lien Negotiation Agent</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f4f0;
+      --bg-tertiary: #eceae3;
+      --bg-info: #e6f1fb;
+      --bg-warning: #faeeda;
+      --bg-success: #eaf3de;
+      --bg-danger: #fcebeb;
+      --text-primary: #1a1a18;
+      --text-secondary: #5f5e5a;
+      --text-tertiary: #888780;
+      --text-info: #0c447c;
+      --text-warning: #633806;
+      --text-success: #27500a;
+      --text-danger: #791f1f;
+      --border-light: rgba(26,26,24,0.12);
+      --border-med: rgba(26,26,24,0.22);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1e1e1c;
+        --bg-secondary: #282826;
+        --bg-tertiary: #313130;
+        --bg-info: #042c53;
+        --bg-warning: #412402;
+        --bg-success: #173404;
+        --bg-danger: #501313;
+        --text-primary: #e8e6de;
+        --text-secondary: #9c9a92;
+        --text-tertiary: #6b6962;
+        --text-info: #85b7eb;
+        --text-warning: #fac775;
+        --text-success: #97c459;
+        --text-danger: #f09595;
+        --border-light: rgba(232,230,222,0.1);
+        --border-med: rgba(232,230,222,0.2);
+      }
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      border: 0.5px solid var(--border-light);
+      padding: 2rem 2rem 2.5rem;
+    }
+
+    .header { margin-bottom: 1.75rem; }
+    .header h1 { font-size: 18px; font-weight: 500; margin-bottom: 4px; }
+    .header p { font-size: 13px; color: var(--text-secondary); }
+
+    .tabs { display: flex; gap: 2px; border-bottom: 0.5px solid var(--border-light); margin-bottom: 1.75rem; overflow-x: auto; }
+    .tab { padding: 8px 14px; font-size: 13px; cursor: pointer; border: none; background: none; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -0.5px; white-space: nowrap; font-family: var(--font); }
+    .tab.active { color: var(--text-primary); border-bottom-color: var(--text-primary); font-weight: 500; }
+    .tab:hover:not(.active) { color: var(--text-primary); }
+
+    .pane { display: none; }
+    .pane.active { display: block; }
+
+    .section { margin-bottom: 1.1rem; }
+    .section label { display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    @media (max-width: 600px) { .row2, .row3 { grid-template-columns: 1fr; } }
+
+    input, select, textarea {
+      width: 100%; font-family: var(--font); font-size: 14px;
+      background: var(--bg-primary); color: var(--text-primary);
+      border: 0.5px solid var(--border-med); border-radius: var(--radius-md);
+      padding: 8px 10px; outline: none; transition: border-color 0.15s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--text-primary); }
+    textarea { resize: vertical; min-height: 72px; }
+
+    .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .tag {
+      padding: 4px 10px; border-radius: 20px; font-size: 12px; cursor: pointer;
+      border: 0.5px solid var(--border-med); background: var(--bg-secondary);
+      color: var(--text-secondary); transition: all 0.15s; user-select: none;
+    }
+    .tag:hover { border-color: var(--text-primary); color: var(--text-primary); }
+    .tag.sel { background: var(--bg-info); color: var(--text-info); border-color: var(--text-info); }
+
+    .btn {
+      background: var(--text-primary); color: var(--bg-primary); border: none;
+      padding: 10px 20px; border-radius: var(--radius-md); font-size: 13px;
+      font-weight: 500; cursor: pointer; width: 100%; margin-top: 0.5rem;
+      font-family: var(--font); transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-sm { padding: 7px 14px; font-size: 12px; width: auto; margin-top: 0; }
+
+    .card {
+      background: var(--bg-secondary); border-radius: var(--radius-lg);
+      padding: 1.1rem 1.25rem; margin-top: 0.75rem;
+      border: 0.5px solid var(--border-light);
+    }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0.75rem 0; }
+    @media (max-width: 600px) { .metric-grid { grid-template-columns: repeat(2, 1fr); } }
+    .metric {
+      background: var(--bg-primary); border: 0.5px solid var(--border-light);
+      border-radius: var(--radius-md); padding: 10px 12px;
+    }
+    .metric .val { font-size: 17px; font-weight: 500; }
+    .metric .lbl { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+    .metric .sub { font-size: 10px; color: var(--text-tertiary); margin-top: 1px; }
+
+    .ai-out { font-size: 13px; line-height: 1.8; color: var(--text-primary); white-space: pre-wrap; }
+
+    .spinner {
+      display: inline-block; width: 13px; height: 13px;
+      border: 2px solid var(--border-med); border-top-color: var(--text-primary);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-msg { padding: 2rem 0; text-align: center; color: var(--text-secondary); font-size: 13px; }
+    .empty-msg { padding: 2rem 0; text-align: center; color: var(--text-tertiary); font-size: 13px; }
+
+    .msg {
+      padding: 9px 13px; border-radius: var(--radius-md);
+      margin-bottom: 8px; font-size: 13px; line-height: 1.65;
+    }
+    .msg-ai { background: var(--bg-secondary); border: 0.5px solid var(--border-light); max-width: 88%; }
+    .msg-user {
+      background: var(--bg-info); color: var(--text-info);
+      border: 0.5px solid rgba(12,68,124,0.2); margin-left: auto; max-width: 80%;
+    }
+    .chat-wrap { min-height: 180px; margin-bottom: 10px; }
+    .chat-row { display: flex; gap: 8px; }
+    .chat-row input { flex: 1; }
+    .chat-row button { white-space: nowrap; padding: 8px 14px; font-size: 12px; width: auto; }
+
+    .offer-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+      padding: 10px 12px; background: var(--bg-primary);
+      border: 0.5px solid var(--border-light); border-radius: var(--radius-md);
+    }
+    .offer-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-pl { background: var(--text-info); }
+    .dot-pr { background: var(--text-warning); }
+    .dot-agree { background: var(--text-success); }
+
+    .progress-bar { height: 6px; background: var(--border-light); border-radius: 3px; margin: 6px 0; }
+    .progress-fill { height: 100%; border-radius: 3px; background: var(--text-primary); transition: width 0.4s; }
+
+    .divider { border: none; border-top: 0.5px solid var(--border-light); margin: 1rem 0; }
+
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-right: 4px; }
+    .badge-info { background: var(--bg-info); color: var(--text-info); }
+    .badge-warn { background: var(--bg-warning); color: var(--text-warning); }
+    .badge-ok { background: var(--bg-success); color: var(--text-success); }
+    .badge-danger { background: var(--bg-danger); color: var(--text-danger); }
+
+    .section-head {
+      font-size: 11px; font-weight: 500; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;
+    }
+
+    .disclaimer {
+      margin-top: 2rem; padding: 10px 14px;
+      background: var(--bg-warning); border-radius: var(--radius-md);
+      font-size: 12px; color: var(--text-warning); line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Provider lien negotiation agent</h1>
+    <p>Medical provider lien negotiation — powered by AI</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="go('lien')">Lien details</button>
+    <button class="tab" onclick="go('analysis')">Lien analysis</button>
+    <button class="tab" onclick="go('tracker')">Offer tracker</button>
+    <button class="tab" onclick="go('negotiate')">Negotiate</button>
+    <button class="tab" onclick="go('letter')">Draft letter</button>
+  </div>
+
+  <!-- LIEN DETAILS -->
+  <div id="pane-lien" class="pane active">
+    <div class="row2">
+      <div class="section">
+        <label>Patient / claimant name</label>
+        <input type="text" id="patient" placeholder="e.g. Maria Gonzalez"/>
+      </div>
+      <div class="section">
+        <label>Date of service (DOS)</label>
+        <input type="date" id="dos"/>
+      </div>
+    </div>
+    <div class="row3">
+      <div class="section">
+        <label>Billed amount (gross charges)</label>
+        <input type="number" id="billed" placeholder="e.g. 85000"/>
+      </div>
+      <div class="section">
+        <label>Lien amount currently asserted</label>
+        <input type="number" id="lien" placeholder="e.g. 62000"/>
+      </div>
+      <div class="section">
+        <label>Provider's cost basis (if known)</label>
+        <input type="number" id="cost" placeholder="e.g. 18000"/>
+      </div>
+    </div>
+    <div class="section">
+      <label>Type of treatment provided</label>
+      <div class="tag-row" id="tx-tags">
+        <span class="tag" onclick="toggleTag(this)">Surgery</span>
+        <span class="tag" onclick="toggleTag(this)">Emergency / ER</span>
+        <span class="tag" onclick="toggleTag(this)">Physical therapy</span>
+        <span class="tag" onclick="toggleTag(this)">Chiropractic</span>
+        <span class="tag" onclick="toggleTag(this)">Imaging / MRI</span>
+        <span class="tag" onclick="toggleTag(this)">Injections / pain mgmt</span>
+        <span class="tag" onclick="toggleTag(this)">Hospital inpatient</span>
+        <span class="tag" onclick="toggleTag(this)">Specialist consult</span>
+        <span class="tag" onclick="toggleTag(this)">Ambulance</span>
+        <span class="tag" onclick="toggleTag(this)">DME / equipment</span>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="section">
+        <label>Payor type</label>
+        <select id="payor">
+          <option value="">Select payor type...</option>
+          <option>Letter of protection (LOP)</option>
+          <option>Medical lien (no insurance)</option>
+          <option>Health insurance — subrogation</option>
+          <option>Medicare lien</option>
+          <option>Medicaid lien</option>
+          <option>Workers' comp lien</option>
+        </select>
+      </div>
+      <div class="section">
+        <label>Jurisdiction / state</label>
+        <input type="text" id="jurisdiction" placeholder="e.g. Florida"/>
+      </div>
+    </div>
+    <div class="section">
+      <label>Settlement facts known to provider</label>
+      <div class="tag-row" id="settle-tags">
+        <span class="tag" onclick="toggleTag(this)">Settlement reached</span>
+        <span class="tag" onclick="toggleTag(this)">Policy limits case</span>
+        <span class="tag" onclick="toggleTag(this)">Multiple defendants</span>
+        <span class="tag" onclick="toggleTag(this)">Disputed liability</span>
+        <span class="tag" onclick="toggleTag(this)">Comparative fault</span>
+        <span class="tag" onclick="toggleTag(this)">UIM / underinsured</span>
+      </div>
+    </div>
+    <div class="row3">
+      <div class="section">
+        <label>Gross settlement amount ($)</label>
+        <input type="number" id="settlement" placeholder="e.g. 150000"/>
+      </div>
+      <div class="section">
+        <label>Attorney fees + costs ($)</label>
+        <input type="number" id="atty-fees" placeholder="e.g. 50000"/>
+      </div>
+      <div class="section">
+        <label>Other liens / competing claims ($)</label>
+        <input type="number" id="other-liens" placeholder="e.g. 10000"/>
+      </div>
+    </div>
+    <div class="section">
+      <label>Law firm / plaintiff attorney</label>
+      <input type="text" id="atty" placeholder="e.g. Smith & Associates, Miami FL"/>
+    </div>
+    <div class="section">
+      <label>Additional notes</label>
+      <textarea id="notes" placeholder="Describe treatment necessity, causation issues, billing disputes, prior negotiations, client hardship arguments..."></textarea>
+    </div>
+    <button class="btn" onclick="analyzeLien()">Analyze lien ↗</button>
+  </div>
+
+  <!-- ANALYSIS -->
+  <div id="pane-analysis" class="pane">
+    <div id="analysis-loading" class="loading-msg" style="display:none;"><span class="spinner"></span>Analyzing lien position...</div>
+    <div id="analysis-empty" class="empty-msg">Complete lien details first to generate analysis.</div>
+    <div id="analysis-content" style="display:none;">
+      <div class="metric-grid">
+        <div class="metric"><div class="val" id="m-net">—</div><div class="lbl">Net to client est.</div><div class="sub">After fees &amp; liens</div></div>
+        <div class="metric"><div class="val" id="m-floor">—</div><div class="lbl">Provider floor</div><div class="sub">Minimum acceptable</div></div>
+        <div class="metric"><div class="val" id="m-target">—</div><div class="lbl">Recommended target</div><div class="sub">Negotiated reduction</div></div>
+        <div class="metric"><div class="val" id="m-reduction">—</div><div class="lbl">% reduction</div><div class="sub">From lien amount</div></div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:0.75rem;">
+        <span style="font-size:11px;color:var(--text-tertiary)" id="prog-left"></span>
+        <span style="font-size:11px;color:var(--text-tertiary)" id="prog-right"></span>
+      </div>
+      <div class="card">
+        <p class="section-head">AI lien analysis</p>
+        <div class="ai-out" id="analysis-text"></div>
+      </div>
+      <div style="margin-top:10px;">
+        <span class="badge" id="badge-payor"></span>
+        <span class="badge" id="badge-risk"></span>
+        <span class="badge" id="badge-leverage"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- OFFER TRACKER -->
+  <div id="pane-tracker" class="pane">
+    <div id="tracker-empty" class="empty-msg">Run lien analysis to enable offer tracking.</div>
+    <div id="tracker-content" style="display:none;">
+      <p class="section-head">Negotiation timeline</p>
+      <div id="offer-list"></div>
+      <hr class="divider"/>
+      <p class="section-head">Log new position</p>
+      <div class="row3">
+        <div class="section">
+          <label>Party</label>
+          <select id="offer-party">
+            <option value="provider">Provider (us)</option>
+            <option value="plaintiff">Plaintiff counsel</option>
+            <option value="agreed">Agreed / settled</option>
+          </select>
+        </div>
+        <div class="section">
+          <label>Amount ($)</label>
+          <input type="number" id="offer-amt" placeholder="e.g. 45000"/>
+        </div>
+        <div class="section">
+          <label>Note</label>
+          <input type="text" id="offer-note" placeholder="e.g. Counteroffer #2"/>
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="logOffer()">Log position</button>
+    </div>
+  </div>
+
+  <!-- NEGOTIATE -->
+  <div id="pane-negotiate" class="pane">
+    <div id="neg-empty" class="empty-msg">Run lien analysis to enable negotiation support.</div>
+    <div id="neg-content" style="display:none;">
+      <div class="section">
+        <label>Quick actions</label>
+        <div class="tag-row" style="margin-bottom:12px;">
+          <span class="tag" onclick="quickMsg('What is our strongest argument to defend this lien amount?')">Defend lien</span>
+          <span class="tag" onclick="quickMsg('What reduction percentage should we accept and why?')">Reduction guidance</span>
+          <span class="tag" onclick="quickMsg('How do we respond to a hardship argument from the attorney?')">Counter hardship</span>
+          <span class="tag" onclick="quickMsg('What are the Medicare/Medicaid reduction rules for this lien?')">Statutory rules</span>
+          <span class="tag" onclick="quickMsg('Draft a counter-proposal response to a low offer from plaintiff counsel.')">Draft counter</span>
+          <span class="tag" onclick="quickMsg('What are the risks if we refuse to reduce and this goes to court?')">Litigation risk</span>
+        </div>
+      </div>
+      <div class="chat-wrap" id="chat-msgs"></div>
+      <div class="chat-row">
+        <input type="text" id="chat-in" placeholder="Ask about lien strategy, reduction thresholds, legal arguments..." onkeydown="if(event.key==='Enter')sendChat()"/>
+        <button onclick="sendChat()">Send ↗</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRAFT LETTER -->
+  <div id="pane-letter" class="pane">
+    <div id="letter-empty" class="empty-msg">Complete lien details to generate letters.</div>
+    <div id="letter-content" style="display:none;">
+      <div class="section">
+        <label>Letter type</label>
+        <div class="tag-row" style="margin-bottom:10px;" id="letter-types">
+          <span class="tag sel" data-lt="assert" onclick="setLT(this)">Lien assertion / notice</span>
+          <span class="tag" data-lt="counter" onclick="setLT(this)">Counter to low offer</span>
+          <span class="tag" data-lt="reduction" onclick="setLT(this)">Reduction offer letter</span>
+          <span class="tag" data-lt="accept" onclick="setLT(this)">Acceptance &amp; release</span>
+          <span class="tag" data-lt="demand" onclick="setLT(this)">Final demand / hold on funds</span>
+        </div>
+      </div>
+      <button class="btn" style="margin-bottom:1rem;" onclick="generateLetter()">Generate letter ↗</button>
+      <div id="letter-loading" class="loading-msg" style="display:none;"><span class="spinner"></span>Drafting letter...</div>
+      <div class="card" id="letter-card" style="display:none;">
+        <div class="ai-out" id="letter-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    <strong>Disclaimer:</strong> This tool is for informational and workflow support purposes only. All AI-generated analysis and letters should be reviewed by a licensed attorney before use. This does not constitute legal advice.
+  </div>
+</div>
+
+<script>
+  
+  const API_URL = '/.netlify/functions/negotiate';
+  let caseData = {}, analysisResult = '', chatHistory = [], offers = [], analysisRan = false, letterType = 'assert';
+
+  function go(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', ['lien','analysis','tracker','negotiate','letter'][i] === tab);
+    });
+    document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+    document.getElementById('pane-' + tab).classList.add('active');
+    if ((tab === 'letter' || tab === 'tracker') && analysisRan) {
+      document.getElementById('letter-empty').style.display = 'none';
+      document.getElementById('letter-content').style.display = 'block';
+      document.getElementById('tracker-empty').style.display = 'none';
+      document.getElementById('tracker-content').style.display = 'block';
+    }
+  }
+
+  function toggleTag(el) { el.classList.toggle('sel'); }
+  function getTreatments() { return Array.from(document.querySelectorAll('#tx-tags .tag.sel')).map(t => t.textContent); }
+  function getSettleFacts() { return Array.from(document.querySelectorAll('#settle-tags .tag.sel')).map(t => t.textContent); }
+  function fmt(n) { return n ? '$' + Number(n).toLocaleString() : '—'; }
+  function pct(a, b) { return b > 0 ? Math.round((1 - a / b) * 100) + '%' : '—'; }
+
+  function collect() {
+    return {
+      patient: document.getElementById('patient').value || 'Patient',
+      dos: document.getElementById('dos').value,
+      billed: +document.getElementById('billed').value || 0,
+      lien: +document.getElementById('lien').value || 0,
+      cost: +document.getElementById('cost').value || 0,
+      treatments: getTreatments(),
+      payor: document.getElementById('payor').value || 'Letter of protection (LOP)',
+      jurisdiction: document.getElementById('jurisdiction').value || 'Florida',
+      settleFacts: getSettleFacts(),
+      settlement: +document.getElementById('settlement').value || 0,
+      attyFees: +document.getElementById('atty-fees').value || 0,
+      otherLiens: +document.getElementById('other-liens').value || 0,
+      atty: document.getElementById('atty').value,
+      notes: document.getElementById('notes').value
+    };
+  }
+
+  async function analyzeLien() {
+    caseData = collect();
+    go('analysis');
+    document.getElementById('analysis-empty').style.display = 'none';
+    document.getElementById('analysis-loading').style.display = 'block';
+    document.getElementById('analysis-content').style.display = 'none';
+
+    const netToClient = caseData.settlement - caseData.attyFees - caseData.lien - caseData.otherLiens;
+    const available = caseData.settlement - caseData.attyFees - caseData.otherLiens;
+
+    const prompt = `You are a medical lien negotiation analyst advising the PROVIDER (not the plaintiff). Analyze this lien position and provide:
+
+Line 1 only: METRICS:floor=$X|target=$Y|risk=low/medium/high|leverage=low/medium/high
+
+Then write 3-4 paragraphs of analysis covering:
+1. Lien strength and legal position (payor type, jurisdiction factors)
+2. Net-to-client analysis and proportionality
+3. Recommended reduction range and justification
+4. Key arguments the provider can use AND weaknesses the attorney will exploit
+
+Case facts:
+- Patient: ${caseData.patient}
+- Treatment: ${caseData.treatments.join(', ') || 'not specified'}
+- Payor type: ${caseData.payor}
+- Billed: ${fmt(caseData.billed)} | Lien: ${fmt(caseData.lien)} | Cost basis: ${caseData.cost > 0 ? fmt(caseData.cost) : 'unknown'}
+- Gross settlement: ${fmt(caseData.settlement)} | Atty fees: ${fmt(caseData.attyFees)} | Other liens: ${fmt(caseData.otherLiens)}
+- Net to client: ${fmt(netToClient)} | Available for medical liens: ${fmt(available)}
+- Settlement facts: ${caseData.settleFacts.join(', ') || 'none'}
+- Jurisdiction: ${caseData.jurisdiction}
+- Notes: ${caseData.notes || 'none'}
+
+Be direct and practical. Focus on maximizing provider recovery while being realistic about what a court would award.`;
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+      });
+      const data = await res.json();
+      const text = data.content.map(b => b.text || '').join('');
+      const mm = text.match(/METRICS:floor=\$([0-9,]+)\|target=\$([0-9,]+)\|risk=(\w+)\|leverage=(\w+)/);
+      if (mm) {
+        document.getElementById('m-floor').textContent = '$' + mm[1];
+        document.getElementById('m-target').textContent = '$' + mm[2];
+        const riskMap = { low: ['badge-ok','Low risk'], medium: ['badge-warn','Medium risk'], high: ['badge-danger','High risk'] };
+        const levMap = { low: ['badge-danger','Low leverage'], medium: ['badge-warn','Medium leverage'], high: ['badge-ok','Strong leverage'] };
+        const [rc, rt] = riskMap[mm[3]] || ['badge-info','Unknown risk'];
+        const [lc, lt] = levMap[mm[4]] || ['badge-info','Unknown leverage'];
+        document.getElementById('badge-payor').className = 'badge badge-info';
+        document.getElementById('badge-payor').textContent = caseData.payor || 'LOP';
+        document.getElementById('badge-risk').className = 'badge ' + rc;
+        document.getElementById('badge-risk').textContent = rt;
+        document.getElementById('badge-leverage').className = 'badge ' + lc;
+        document.getElementById('badge-leverage').textContent = lt;
+        const floor = parseInt(mm[1].replace(/,/g, ''));
+        const target = parseInt(mm[2].replace(/,/g, ''));
+        document.getElementById('m-reduction').textContent = pct(target, caseData.lien);
+        const netC = available - caseData.lien;
+        document.getElementById('m-net').textContent = fmt(netC);
+        const pct2 = caseData.lien > 0 ? Math.min(100, Math.round(target / caseData.lien * 100)) : 60;
+        document.getElementById('prog-fill').style.width = pct2 + '%';
+        document.getElementById('prog-left').textContent = 'Floor: ' + fmt(floor);
+        document.getElementById('prog-right').textContent = 'Asserted: ' + fmt(caseData.lien);
+      }
+      const body = text.replace(/METRICS:[^\n]+\n?/, '').trim();
+      analysisResult = body;
+      document.getElementById('analysis-text').textContent = body;
+      document.getElementById('analysis-loading').style.display = 'none';
+      document.getElementById('analysis-content').style.display = 'block';
+      analysisRan = true;
+      document.getElementById('neg-empty').style.display = 'none';
+      document.getElementById('neg-content').style.display = 'block';
+      document.getElementById('tracker-empty').style.display = 'none';
+      document.getElementById('tracker-content').style.display = 'block';
+      chatHistory = [
+        { role: 'user', content: `You are a medical provider lien negotiation advisor. The provider is your client.\n\nCase: ${JSON.stringify(caseData)}\n\nAnalysis:\n${analysisResult}` },
+        { role: 'assistant', content: "I've reviewed the lien position and analysis. I'm ready to help strategize. What would you like to work through?" }
+      ];
+      renderChat();
+      if (offers.length === 0) renderOffers();
+    } catch (e) {
+      document.getElementById('analysis-loading').style.display = 'none';
+      document.getElementById('analysis-empty').style.display = 'block';
+      document.getElementById('analysis-empty').textContent = 'Error: ' + e.message;
+    }
+  }
+
+  function renderOffers() {
+    const el = document.getElementById('offer-list');
+    if (offers.length === 0) {
+      el.innerHTML = '<p style="font-size:13px;color:var(--text-tertiary);margin-bottom:8px;">No positions logged yet.</p>';
+      return;
+    }
+    el.innerHTML = offers.map(o => {
+      const cls = o.party === 'provider' ? 'dot-pr' : o.party === 'agreed' ? 'dot-agree' : 'dot-pl';
+      const label = o.party === 'provider' ? 'Provider' : o.party === 'agreed' ? 'Agreed' : 'Plaintiff counsel';
+      return `<div class="offer-row">
+        <div class="offer-dot ${cls}"></div>
+        <span style="font-size:12px;color:var(--text-secondary);min-width:110px">${label}</span>
+        <span style="font-size:14px;font-weight:500;min-width:90px">${fmt(o.amount)}</span>
+        <span style="font-size:12px;color:var(--text-secondary);flex:1">${o.note || ''}</span>
+        <span style="font-size:11px;color:var(--text-tertiary)">${o.time}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function logOffer() {
+    const party = document.getElementById('offer-party').value;
+    const amt = +document.getElementById('offer-amt').value;
+    const note = document.getElementById('offer-note').value;
+    if (!amt) return;
+    const now = new Date();
+    offers.push({ party, amount: amt, note, time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+    document.getElementById('offer-amt').value = '';
+    document.getElementById('offer-note').value = '';
+    renderOffers();
+  }
+
+  function renderChat() {
+    const el = document.getElementById('chat-msgs');
+    el.innerHTML = chatHistory.slice(1).map(m =>
+      `<div class="msg ${m.role === 'user' ? 'msg-user' : 'msg-ai'}">${m.content.replace(/</g, '&lt;')}</div>`
+    ).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function quickMsg(txt) { document.getElementById('chat-in').value = txt; sendChat(); }
+
+  async function sendChat() {
+    const input = document.getElementById('chat-in');
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    chatHistory.push({ role: 'user', content: msg });
+    renderChat();
+    const loading = document.createElement('div');
+    loading.className = 'msg msg-ai';
+    loading.innerHTML = '<span class="spinner"></span>';
+    document.getElementById('chat-msgs').appendChild(loading);
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 700, messages: chatHistory })
+      });
+      const data = await res.json();
+      const reply = data.content.map(b => b.text || '').join('');
+      chatHistory.push({ role: 'assistant', content: reply });
+      renderChat();
+    } catch (e) {
+      chatHistory.push({ role: 'assistant', content: 'Error: ' + e.message });
+      renderChat();
+    }
+  }
+
+  function setLT(el) {
+    document.querySelectorAll('#letter-types .tag').forEach(t => t.classList.remove('sel'));
+    el.classList.add('sel');
+    letterType = el.dataset.lt;
+  }
+
+  async function generateLetter() {
+    caseData = collect();
+    document.getElementById('letter-card').style.display = 'none';
+    document.getElementById('letter-loading').style.display = 'block';
+    const typeMap = {
+      assert: 'a formal medical lien assertion / notice of lien letter from the provider to plaintiff counsel',
+      counter: 'a counter-offer letter from the provider rejecting a low settlement offer and proposing a higher reduction amount',
+      reduction: 'a lien reduction offer letter from the provider offering to accept a reduced amount in exchange for prompt payment',
+      accept: 'a lien satisfaction and release letter accepting the negotiated amount and releasing the lien',
+      demand: 'a final demand letter / notice of hold on settlement funds if lien is not resolved'
+    };
+    const prompt = `Draft ${typeMap[letterType]}. Use professional legal correspondence format: date, provider letterhead placeholder, attorney name/address, Re: line, professional body paragraphs with specific dollar amounts, and appropriate closing.
+
+Provider: [Provider Name], ${caseData.jurisdiction}
+Patient: ${caseData.patient} | DOS: ${caseData.dos}
+Billed: ${fmt(caseData.billed)} | Lien: ${fmt(caseData.lien)}
+Payor type: ${caseData.payor}
+Gross settlement: ${fmt(caseData.settlement)}
+Atty fees: ${fmt(caseData.attyFees)} | Other liens: ${fmt(caseData.otherLiens)}
+Treatment: ${caseData.treatments.join(', ') || 'medical services'}
+Plaintiff counsel: ${caseData.atty || '[Attorney Name and Firm]'}
+Notes: ${caseData.notes || 'none'}
+
+Be specific, professional, and assertive of provider rights while leaving room for negotiation.`;
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 900, messages: [{ role: 'user', content: prompt }] })
+      });
+      const data = await res.json();
+      const text = data.content.map(b => b.text || '').join('');
+      document.getElementById('letter-text').textContent = text;
+      document.getElementById('letter-loading').style.display = 'none';
+      document.getElementById('letter-card').style.display = 'block';
+    } catch (e) {
+      document.getElementById('letter-loading').style.display = 'none';
+      document.getElementById('letter-text').textContent = 'Error: ' + e.message;
+      document.getElementById('letter-card').style.display = 'block';
+    }
+  }
+</script>
+</body>
+</html>
