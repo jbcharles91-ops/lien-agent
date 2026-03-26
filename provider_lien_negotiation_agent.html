@@ -491,7 +491,7 @@ Be direct and practical. Focus on maximizing provider recovery while being reali
         body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
       });
       const data = await res.json();
-      const text = data.content.map(b => b.text || '').join('');
+      const text = (data.content || []).map(b => b.text || '').join('');
       const mm = text.match(/METRICS:floor=\$([0-9,]+)\|target=\$([0-9,]+)\|risk=(\w+)\|leverage=(\w+)/);
       if (mm) {
         document.getElementById('m-floor').textContent = '$' + mm[1];
@@ -642,7 +642,7 @@ Be specific, professional, and assertive of provider rights while leaving room f
         body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 900, messages: [{ role: 'user', content: prompt }] })
       });
       const data = await res.json();
-      const text = data.content.map(b => b.text || '').join('');
+      const text = (data.content || []).map(b => b.text || '').join('');
       document.getElementById('letter-text').textContent = text;
       document.getElementById('letter-loading').style.display = 'none';
       document.getElementById('letter-card').style.display = 'block';
